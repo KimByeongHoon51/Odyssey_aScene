@@ -3,6 +3,7 @@
 영화 「오디세이」에서 오디세우스가 연회장의 구혼자들을 처단하는 장면을 옮긴 **탑뷰 도트 뱀파이어 서바이벌** 웹게임입니다.
 
 **▶ 플레이:** https://kimbyeonghoon51.github.io/Odyssey_aScene/
+
 **▶ 밸런스 테이블:** https://kimbyeonghoon51.github.io/Odyssey_aScene/balance.html
 
 ## 장면
