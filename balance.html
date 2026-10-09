@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Odyssey_aScene 밸런스 테이블</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<script src="balance.js"></script>
+<style>
+:root{--bg:#17110c;--panel:#221911;--line:#4a3826;--ink:#f3e6c8;--dim:#a8916c;--gold:#e8c56a;--chg:#5a3a14;--red:#e0705a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Galmuri11',monospace;font-size:13px;line-height:1.5}
+header{position:sticky;top:0;z-index:5;background:#0f0b08;border-bottom:2px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+header h1{font-size:16px;color:var(--gold);margin:0 12px 0 0;font-weight:normal}
+button{font-family:inherit;font-size:13px;color:var(--ink);background:#3a2618;border:1px solid var(--gold);padding:5px 12px;cursor:pointer}
+button:hover{background:#6a4424}
+button.main{background:#7a4a1a}
+#status{color:var(--dim);margin-left:auto}
+main{max-width:1180px;margin:0 auto;padding:12px 16px 60px}
+section{background:var(--panel);border:1px solid var(--line);margin:14px 0;padding:10px 12px}
+h2{font-size:14px;color:var(--gold);margin:0 0 6px;font-weight:normal}
+.note{color:var(--dim);font-size:12px;margin:0 0 8px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{border:1px solid var(--line);padding:3px 6px;text-align:center;white-space:nowrap}
+th{background:#2e2216;color:var(--dim);font-weight:normal;font-size:12px}
+td.lab{text-align:left;color:var(--ink)}
+td.der{color:#9fc8a0;background:#1a1f16}
+input[type=number],input[type=text]{width:72px;font-family:inherit;font-size:13px;background:#120d09;color:var(--ink);border:1px solid #5a4430;padding:2px 4px;text-align:right}
+input[type=text].wide{width:190px;text-align:left}
+input.chg{background:var(--chg);border-color:var(--gold)}
+label.ck{display:inline-flex;align-items:center;gap:2px;margin:0 3px;font-size:12px}
+label.ck.chg{color:var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.kv{min-width:0}
+.kv td{white-space:normal}
+.kv td:first-child{text-align:left;width:90px}
+.kv td:last-child{text-align:left;color:var(--dim);font-size:12px;white-space:normal}
+.legend span{display:inline-block;padding:0 6px;margin-right:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Odyssey_aScene 밸런스 테이블</h1>
+  <button class="main" id="btnTest">▶ 이 값으로 테스트 플레이</button>
+  <button id="btnDownload">balance.js 다운로드</button>
+  <button id="btnReset">balance.js 값으로 되돌리기</button>
+  <span id="status"></span>
+</header>
+<main>
+  <p class="note legend">
+    <span style="background:var(--chg);border:1px solid var(--gold)">노란 칸</span>은 balance.js에서 바뀐 값,
+    <span style="background:#1a1f16;color:#9fc8a0">초록 칸</span>은 자동 계산 값(수정 불가)입니다.
+    값은 이 브라우저에 자동 저장되며, <b>테스트 플레이</b>는 저장된 값으로 게임을 새 탭에서 엽니다.
+    확정하려면 <b>balance.js 다운로드</b> 후 게임 폴더의 balance.js를 교체하세요.
+  </p>
+  <div class="grid">
+    <section><h2>플레이어</h2><div class="wrap"><table class="kv" id="t-player"></table></div></section>
+    <section><h2>활</h2><div class="wrap"><table class="kv" id="t-bow"></table></div></section>
+    <section><h2>검 (회전, 가까이·빠르게)</h2><div class="wrap"><table class="kv" id="t-sword"></table></div></section>
+    <section><h2>도끼 (회전, 멀리·느리게)</h2><div class="wrap"><table class="kv" id="t-axe"></table></div></section>
+    <section><h2>무기 드랍</h2><div class="wrap"><table class="kv" id="t-drops"></table></div></section>
+    <section><h2>보스 패턴 공통</h2><div class="wrap"><table class="kv" id="t-bossPattern"></table></div></section>
+  </div>
+  <section><h2>구혼자</h2><p class="note">처치 시간 = 무기 하나가 계속 맞힐 때 기준(검·도끼는 틱마다 맞는다고 가정한 최대치)</p><div class="wrap"><table id="t-enemies"></table></div></section>
+  <section><h2>스테이지</h2><p class="note">전원 등장 ≈ (구혼자 수 ÷ 평균 무리 인원) × 등장 간격. 무기 기대치 = 확정 2개 + 무기 든 구혼자 수 × 랜덤 드랍률</p><div class="wrap"><table id="t-stages"></table></div></section>
+  <section><h2>보스: 안티노오스</h2><p class="note">돌진 거리 = 돌진 속도 × 돌진 시간. 패턴은 체크된 것 중 무작위로 사용</p><div class="wrap"><table id="t-bosses"></table></div></section>
+</main>
+<script>
+'use strict';
+const KEY = 'odyssey_balance_test';
+const DEFAULT = JSON.parse(JSON.stringify(window.BALANCE));
+let D;
+try { D = JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { D = null; }
+if (!D) D = JSON.parse(JSON.stringify(DEFAULT));
+
+const FIELDS = {
+  player: [['hp', '최대 체력'], ['speed', '이동 속도 (도트/초)'], ['invuln', '피격 후 무적 (초)']],
+  bow: [['dmg', '화살 1발 데미지'], ['interval', '발사 주기 (초)'], ['range', '조준 사거리'], ['arrowSpeed', '화살 속도']],
+  sword: [['dmg', '틱당 데미지'], ['tick', '틱 간격 (초)'], ['radius', '회전 반경'], ['spinSpeed', '회전 속도 (라디안/초)'], ['hitSize', '판정 크기'], ['knockback', '밀어내기']],
+  axe: [['dmg', '틱당 데미지'], ['tick', '틱 간격 (초)'], ['radius', '회전 반경'], ['spinSpeed', '회전 속도 (라디안/초)'], ['hitSize', '판정 크기'], ['knockback', '밀어내기']],
+  drops: [['guaranteedKills', '확정 드랍 처치 수 (검·도끼 각 1, 쉼표 구분)'], ['randomRate', '무기 든 구혼자 랜덤 드랍률 (0~1)']],
+  bossPattern: [['dashTele', '돌진 예고 (초)'], ['tripleTele', '3연속 돌진 사이 예고 (초)'], ['tripleCount', '연속 돌진 횟수'], ['slamTele', '내려찍기 예고 (초)'], ['slamRadius', '충격파 최대 반경'], ['slamTime', '충격파 퍼지는 시간 (초)'], ['slamWidth', '충격파 판정 두께'], ['spinTele', '회전 베기 예고 (초)'], ['spinRadius', '회전 베기 반경'], ['spinTime', '회전 베기 지속 (초)'], ['spinSpeedMul', '회전 베기 중 추격 속도 배율'], ['dashSpinTime', '돌진 직후 회전 베기 지속 (초)']],
+};
+const ETYPES = ['fist', 'sword', 'axe', 'swordaxe', 'spear'];
+const ARMED = { fist: 0, sword: 1, axe: 1, swordaxe: 1, spear: 0 };
+const PATTERNS = [['dash', '돌진'], ['triple', '3연속 돌진'], ['slam', '내려찍기'], ['spin', '회전 베기']];
+
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} status(same(D, DEFAULT) ? 'balance.js와 같음' : '변경 사항 있음 (이 브라우저에 저장됨)'); }
+function status(t) { document.getElementById('status').textContent = t; }
+
+function numInput(obj, key, def, onchange, step) {
+  const inp = document.createElement('input'); inp.type = 'number'; inp.step = step || 'any'; inp.value = obj[key];
+  const mark = () => inp.classList.toggle('chg', def !== undefined && Number(obj[key]) !== Number(def));
+  inp.oninput = () => { const v = parseFloat(inp.value); if (!isNaN(v)) { obj[key] = v; mark(); save(); onchange && onchange(); } };
+  mark(); return inp;
+}
+function cell(tr, content, cls) { const td = document.createElement('td'); if (cls) td.className = cls; if (content instanceof Node) td.appendChild(content); else td.textContent = content; tr.appendChild(td); return td; }
+function head(tbl, cols) { const tr = document.createElement('tr'); cols.forEach(c => { const th = document.createElement('th'); th.textContent = c; tr.appendChild(th); }); tbl.appendChild(tr); }
+const f1 = v => (Math.round(v * 10) / 10).toString();
+
+function renderKV(sec) {
+  const tbl = document.getElementById('t-' + sec); tbl.innerHTML = '';
+  for (const [k, label] of FIELDS[sec]) {
+    const tr = document.createElement('tr');
+    if (Array.isArray(D[sec][k])) {
+      const inp = document.createElement('input'); inp.type = 'text'; inp.value = D[sec][k].join(', ');
+      const mark = () => inp.classList.toggle('chg', !same(D[sec][k], DEFAULT[sec][k]));
+      inp.oninput = () => { const arr = inp.value.split(',').map(x => parseInt(x)).filter(x => !isNaN(x)); D[sec][k] = arr; mark(); save(); renderDerived(); };
+      mark(); cell(tr, inp);
+    } else cell(tr, numInput(D[sec], k, DEFAULT[sec][k], renderDerived));
+    cell(tr, label); tbl.appendChild(tr);
+  }
+  if (sec === 'bow' || sec === 'sword' || sec === 'axe') {
+    const tr = document.createElement('tr'); tr.id = 'dps-' + sec; cell(tr, '', 'der'); cell(tr, sec === 'bow' ? '초당 데미지 (DPS)' : '적 1명에게 최대 DPS'); tbl.appendChild(tr);
+  }
+}
+
+function renderEnemies() {
+  const tbl = document.getElementById('t-enemies'); tbl.innerHTML = '';
+  head(tbl, ['종류', '체력', '데미지', '이동 속도', '플레이어 대비 속도', '활 몇 발', '활만으로 처치(초)', '검 1개 처치(초)', '도끼 1개 처치(초)']);
+  for (const k of ETYPES) {
+    const e = D.enemies[k], d = DEFAULT.enemies[k], tr = document.createElement('tr'); tr.dataset.k = k;
+    cell(tr, e.name, 'lab');
+    cell(tr, numInput(e, 'hp', d.hp, renderDerived)); cell(tr, numInput(e, 'dmg', d.dmg, renderDerived)); cell(tr, numInput(e, 'speed', d.speed, renderDerived));
+    for (let i = 0; i < 5; i++) cell(tr, '', 'der');
+    tbl.appendChild(tr);
+  }
+}
+function renderStages() {
+  const tbl = document.getElementById('t-stages'); tbl.innerHTML = '';
+  head(tbl, ['스테이지', '구혼자 수', '등장 종류', '무리 최소', '무리 최대', '등장 간격(초)', '무리 수', '전원 등장(초)', '무기 기대치(이 스테이지)', '누적 무기(검+도끼)']);
+  D.stages.forEach((s, i) => {
+    const d = DEFAULT.stages[i], tr = document.createElement('tr');
+    cell(tr, String(i + 1));
+    cell(tr, numInput(s, 'enemies', d.enemies, renderDerived, 1));
+    const mixTd = cell(tr, '');
+    for (const k of ETYPES) {
+      const lab = document.createElement('label'); lab.className = 'ck';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = s.mix.includes(k);
+      const mark = () => lab.classList.toggle('chg', !same([...s.mix].sort(), [...d.mix].sort()));
+      cb.onchange = () => { s.mix = ETYPES.filter(t => t === k ? cb.checked : s.mix.includes(t)); if (!s.mix.length) { s.mix = [k]; cb.checked = true; } mixTd.querySelectorAll('label').forEach(l => l.classList.toggle('chg', !same([...s.mix].sort(), [...d.mix].sort()))); save(); renderDerived(); };
+      lab.append(cb, D.enemies[k].name); mixTd.appendChild(lab); mark();
+    }
+    cell(tr, numInput(s, 'groupMin', d.groupMin, renderDerived, 1)); cell(tr, numInput(s, 'groupMax', d.groupMax, renderDerived, 1)); cell(tr, numInput(s, 'spawnInterval', d.spawnInterval, renderDerived));
+    for (let j = 0; j < 4; j++) cell(tr, '', 'der');
+    tbl.appendChild(tr);
+  });
+}
+function renderBosses() {
+  const tbl = document.getElementById('t-bosses'); tbl.innerHTML = '';
+  head(tbl, ['스테이지', '이름', '체력', '데미지', '이동 속도', '패턴 간격(초)', '패턴', '돌진 속도', '돌진 시간(초)', '돌진 후 회전', '돌진 거리']);
+  D.bosses.forEach((b, i) => {
+    const d = DEFAULT.bosses[i], tr = document.createElement('tr');
+    cell(tr, String(i + 1));
+    const nm = document.createElement('input'); nm.type = 'text'; nm.className = 'wide'; nm.value = b.name;
+    nm.oninput = () => { b.name = nm.value; nm.classList.toggle('chg', b.name !== d.name); save(); }; nm.classList.toggle('chg', b.name !== d.name); cell(tr, nm);
+    cell(tr, numInput(b, 'hp', d.hp, renderDerived, 1)); cell(tr, numInput(b, 'dmg', d.dmg, renderDerived, 1)); cell(tr, numInput(b, 'speed', d.speed, renderDerived)); cell(tr, numInput(b, 'cooldown', d.cooldown, renderDerived));
+    const pt = cell(tr, '');
+    for (const [k, label] of PATTERNS) {
+      const lab = document.createElement('label'); lab.className = 'ck';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = b.patterns.includes(k);
+      cb.onchange = () => { b.patterns = PATTERNS.map(p => p[0]).filter(t => t === k ? cb.checked : b.patterns.includes(t)); if (!b.patterns.length) { b.patterns = [k]; cb.checked = true; } pt.querySelectorAll('label').forEach(l => l.classList.toggle('chg', !same([...b.patterns].sort(), [...d.patterns].sort()))); save(); };
+      lab.append(cb, label); pt.appendChild(lab); lab.classList.toggle('chg', !same([...b.patterns].sort(), [...d.patterns].sort()));
+    }
+    cell(tr, numInput(b, 'dashSpeed', d.dashSpeed, renderDerived)); cell(tr, numInput(b, 'dashTime', d.dashTime, renderDerived));
+    const lab = document.createElement('label'); lab.className = 'ck'; const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = b.dashSpin;
+    cb.onchange = () => { b.dashSpin = cb.checked; lab.classList.toggle('chg', b.dashSpin !== d.dashSpin); save(); }; lab.append(cb, '회전'); lab.classList.toggle('chg', b.dashSpin !== d.dashSpin); cell(tr, lab);
+    cell(tr, '', 'der');
+    tbl.appendChild(tr);
+  });
+}
+
+function renderDerived() {
+  const bowDps = D.bow.dmg / D.bow.interval, swDps = D.sword.dmg / D.sword.tick, axDps = D.axe.dmg / D.axe.tick;
+  const setD = (id, v) => { const r = document.getElementById(id); if (r) r.firstChild.textContent = v; };
+  setD('dps-bow', f1(bowDps)); setD('dps-sword', f1(swDps)); setD('dps-axe', f1(axDps));
+  document.querySelectorAll('#t-enemies tr[data-k]').forEach(tr => {
+    const e = D.enemies[tr.dataset.k], tds = tr.querySelectorAll('td.der');
+    tds[0].textContent = Math.round(e.speed / D.player.speed * 100) + '%';
+    tds[1].textContent = Math.ceil(e.hp / D.bow.dmg) + '발';
+    tds[2].textContent = f1(Math.ceil(e.hp / D.bow.dmg) * D.bow.interval);
+    tds[3].textContent = f1(Math.ceil(e.hp / D.sword.dmg) * D.sword.tick);
+    tds[4].textContent = f1(Math.ceil(e.hp / D.axe.dmg) * D.axe.tick);
+  });
+  let cum = 0;
+  document.querySelectorAll('#t-stages tr').forEach((tr, i) => {
+    if (i === 0) return; const s = D.stages[i - 1], tds = tr.querySelectorAll('td.der');
+    const avg = (s.groupMin + s.groupMax) / 2, groups = s.enemies / avg;
+    const armedShare = s.mix.filter(k => ARMED[k]).length / s.mix.length;
+    const exp = D.drops.guaranteedKills.filter(k => k <= s.enemies).length + s.enemies * armedShare * D.drops.randomRate;
+    cum += exp;
+    tds[0].textContent = f1(groups); tds[1].textContent = f1(groups * s.spawnInterval); tds[2].textContent = f1(exp) + '개'; tds[3].textContent = f1(cum) + '개';
+  });
+  document.querySelectorAll('#t-bosses tr').forEach((tr, i) => {
+    if (i === 0) return; const b = D.bosses[i - 1]; tr.querySelector('td.der').textContent = Math.round(b.dashSpeed * b.dashTime) + ' 도트';
+  });
+}
+
+function renderAll() { Object.keys(FIELDS).forEach(renderKV); renderEnemies(); renderStages(); renderBosses(); renderDerived(); save(); }
+
+// balance.js 텍스트 생성 (주석 포함)
+function toJS() {
+  const v = x => typeof x === 'string' ? `'${x.replace(/'/g, "\\'")}'` : Array.isArray(x) ? '[' + x.map(v).join(', ') + ']' : String(x);
+  const obj = o => '{ ' + Object.keys(o).map(k => `${k}: ${v(o[k])}`).join(', ') + ' }';
+  const kv = (sec) => '  ' + sec + ': {\n' + FIELDS[sec].map(([k, l]) => `    ${k}: ${v(D[sec][k])},  // ${l}`).join('\n') + '\n  },\n';
+  let s = '// =====================================================================\n//  Odyssey_aScene — 밸런스 데이터 테이블 (balance.html 에서 내보냄 ' + new Date().toLocaleString('ko-KR') + ')\n//  이 파일의 숫자만 바꾸면 게임에 그대로 반영됩니다.\n// =====================================================================\nwindow.BALANCE = {\n';
+  s += kv('player') + kv('bow') + kv('sword') + kv('axe') + kv('drops');
+  s += '  enemies: {\n' + ETYPES.map(k => `    ${k}: ${obj(D.enemies[k])},`).join('\n') + '\n  },\n';
+  s += '  // mix: 등장 종류, groupMin~groupMax: 한 번에 몰려오는 인원, spawnInterval: 무리 사이 간격\n  stages: [\n' + D.stages.map(o => '    ' + obj(o) + ',').join('\n') + '\n  ],\n';
+  s += '  // patterns: dash / triple / slam / spin, dashSpin: 돌진 후 회전 베기\n  bosses: [\n' + D.bosses.map(o => '    ' + obj(o) + ',').join('\n') + '\n  ],\n';
+  s += kv('bossPattern') + '};\n';
+  return s;
+}
+
+document.getElementById('btnTest').onclick = () => { save(); window.open('Odyssey_aScene.html?balance=test', '_blank'); };
+document.getElementById('btnDownload').onclick = () => {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([toJS()], { type: 'text/javascript' })); a.download = 'balance.js'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+document.getElementById('btnReset').onclick = () => {
+  if (!confirm('지금 화면의 수정 값을 버리고 balance.js 값으로 되돌릴까요?')) return;
+  D = JSON.parse(JSON.stringify(DEFAULT)); try { localStorage.removeItem(KEY); } catch (e) {} renderAll();
+};
+renderAll();
+// 자체 점검: balance.html#check → 내보낸 balance.js를 다시 읽어 값이 같은지 확인
+if (location.hash === '#check') { try { const w = {}; new Function('window', toJS())(w); document.title = same(w.BALANCE, D) ? 'CHECK OK' : 'CHECK DIFF'; } catch (e) { document.title = 'CHECK ERR ' + e; } }
+</script>
+</body>
+</html>
