@@ -1,5 +1,5 @@
 // =====================================================================
-//  Odyssey_aScene — 밸런스 데이터 테이블 (balance.html 에서 내보냄 2026. 10. 9. 오후 6:13:57)
+//  Odyssey_aScene — 밸런스 데이터 테이블 (balance.html 에서 내보냄 2026. 10. 9. 오후 7:04:32)
 //  이 파일의 숫자만 바꾸면 게임에 그대로 반영됩니다.
 // =====================================================================
 window.BALANCE = {
@@ -33,7 +33,7 @@ window.BALANCE = {
   drops: {
     bossSword: 1,  // 안티노오스 처치 시 얻는 검
     bossAxe: 1,  // 안티노오스 처치 시 얻는 도끼
-    randomRate: 0.05,  // 검 든 적은 검, 도끼 든 적은 도끼를 떨어뜨릴 확률 (0~1, 맨주먹·창·방패는 없음)
+    randomRate: 0.1,  // 검 든 적은 검, 도끼 든 적은 도끼를 떨어뜨릴 확률 (0~1, 맨주먹·창·방패는 없음)
   },
   enemies: {
     fist: { name: '맨주먹', hp: 50, dmg: 5, speed: 65 },
@@ -49,10 +49,10 @@ window.BALANCE = {
     { enemies: 20, mix: ['fist', 'sword'], groupMin: 3, groupMax: 5, spawnInterval: 4.6, shieldRate: 0 },
     { enemies: 20, mix: ['sword'], groupMin: 3, groupMax: 5, spawnInterval: 4.8, shieldRate: 0.2 },
     { enemies: 30, mix: ['sword', 'axe'], groupMin: 5, groupMax: 8, spawnInterval: 6.4, shieldRate: 0.2 },
-    { enemies: 50, mix: ['axe'], groupMin: 5, groupMax: 8, spawnInterval: 6.6, shieldRate: 0.2 },
-    { enemies: 60, mix: ['swordaxe'], groupMin: 6, groupMax: 10, spawnInterval: 7.6, shieldRate: 0.2 },
-    { enemies: 70, mix: ['swordaxe', 'spear'], groupMin: 6, groupMax: 10, spawnInterval: 7.6, shieldRate: 0.2 },
-    { enemies: 80, mix: ['spear'], groupMin: 8, groupMax: 13, spawnInterval: 10.5, shieldRate: 0.2 },
+    { enemies: 40, mix: ['axe'], groupMin: 5, groupMax: 8, spawnInterval: 6.6, shieldRate: 0.2 },
+    { enemies: 40, mix: ['swordaxe'], groupMin: 6, groupMax: 10, spawnInterval: 7.6, shieldRate: 0.2 },
+    { enemies: 50, mix: ['swordaxe', 'spear'], groupMin: 6, groupMax: 10, spawnInterval: 7.6, shieldRate: 0.2 },
+    { enemies: 50, mix: ['spear'], groupMin: 8, groupMax: 13, spawnInterval: 10.5, shieldRate: 0.2 },
   ],
   // patterns: dash / triple / slam / spin, dashSpin: 돌진 후 회전 베기
   bosses: [
@@ -70,9 +70,9 @@ window.BALANCE = {
     tripleTele: 0.32,  // 3연속 돌진 사이 예고 (초)
     tripleCount: 3,  // 연속 돌진 횟수
     slamTele: 0.43,  // 내려찍기 예고 (초)
-    slamRadius: 70,  // 충격파 최대 반경
-    slamTime: 0.35,  // 충격파 퍼지는 시간 (초)
-    slamWidth: 9,  // 충격파 판정 두께
+    slamRadius: 60,  // 충격파 최대 반경
+    slamTime: 0.4,  // 충격파 퍼지는 시간 (초)
+    slamWidth: 8,  // 충격파 판정 두께
     spinTele: 0.5,  // 회전 베기 예고 (초)
     spinRadius: 35,  // 회전 베기 반경
     spinTime: 2,  // 회전 베기 지속 (초)
