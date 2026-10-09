@@ -81,7 +81,7 @@ try { if (/[?&]balance=test/.test(location.search)) { const o = localStorage.get
   <canvas id="game" width="320" height="180"></canvas>
 
   <div id="hud" class="layer hidden">
-    <div id="hudTL" class="tx"><div id="hudStage">스테이지 1</div><div id="hudKills">처치 0 / 50</div></div>
+    <div id="hudTL" class="tx"><div id="hudStage">스테이지 1</div><div id="hudKills">구혼자 처치 0 / 20</div></div>
     <button id="pauseBtn" title="일시정지 (ESC)"><i></i><i></i></button>
     <div id="bossBar" class="hidden tx"><div id="bossName"></div><div class="bar"><div id="bossFill"></div></div></div>
     <div id="hudWeapons" class="tx">
@@ -621,7 +621,7 @@ let hudCache = {};
 function setHud(key, val, fn) { if (hudCache[key] !== val) { hudCache[key] = val; fn(val); } }
 function updateHud() {
   setHud('stage', G.stage, v => $('hudStage').textContent = '스테이지 ' + v);
-  setHud('kills', G.kills + (G.boss ? 'b' : ''), () => $('hudKills').textContent = '처치 ' + G.kills + ' / ' + SD().enemies + (G.kills >= SD().enemies ? ' · 보스' : ''));
+  setHud('kills', G.kills + (G.boss ? 'b' : ''), () => $('hudKills').textContent = '구혼자 처치 ' + G.kills + ' / ' + SD().enemies + (G.kills >= SD().enemies ? ' · 보스' : ''));
   for (const [k, id] of [['bow', 'Bow'], ['sword', 'Sword'], ['axe', 'Axe']]) {
     setHud('w' + k, G.weapons[k], v => {
       $('c' + id).textContent = v; const s = $('slot' + id); s.classList.toggle('off', v === 0);
@@ -750,7 +750,7 @@ function update(dt) {
       break;
     case 'dying':
       updateParts(dt); updateCam(dt);
-      if (G.t >= 1.5) { G.state = 'over'; $('overInfo').textContent = '스테이지 ' + G.stage + ' · 처치 ' + G.kills + ' / ' + SD().enemies; $('overScr').classList.remove('hidden'); $('retryBtn').focus(); }
+      if (G.t >= 1.5) { G.state = 'over'; $('overInfo').textContent = '스테이지 ' + G.stage + ' · 구혼자 처치 ' + G.kills + ' / ' + SD().enemies; $('overScr').classList.remove('hidden'); $('retryBtn').focus(); }
       break;
     case 'ending': updateEnding(); break;
   }
@@ -761,7 +761,7 @@ function movePlayer(dt) {
   let dx = (keys.r ? 1 : 0) - (keys.l ? 1 : 0), dy = (keys.d ? 1 : 0) - (keys.u ? 1 : 0);
   p.moving = !!(dx || dy);
   if (p.moving) {
-    const l = Math.hypot(dx, dy); dx /= l; dy /= l; p.fx = dx; p.fy = dy;
+    const l = Math.hypot(dx, dy); dx /= l; dy /= l; p.fx = dx; p.fy = dy; if (dx) p.side = dx > 0 ? 1 : -1;
     p.x = clamp(p.x + dx * PLAYER_SPEED * dt, PLAY.x0, PLAY.x1); p.y = clamp(p.y + dy * PLAYER_SPEED * dt, PLAY.y0, PLAY.y1);
     p.walk += dt * 7;
   }
@@ -771,6 +771,7 @@ function updatePlay(dt) {
   const p = G.p;
   movePlayer(dt);
   if (p.inv > 0) p.inv -= dt;
+  if (p.shotT > 0) p.shotT -= dt;
 
   // 구혼자 등장
   // 무리 단위로 인원을 정하고, 동→남→서→북을 돌며 한 명씩 들어온다
@@ -797,7 +798,8 @@ function updatePlay(dt) {
     if (best) {
       const sx = p.x, sy = p.y - 8, tx = best.x, ty = best.y - (best === G.boss ? 14 : 7), l = Math.hypot(tx - sx, ty - sy) || 1;
       G.arrows.push({ x: sx, y: sy, vx: (tx - sx) / l * BOW.speed, vy: (ty - sy) / l * BOW.speed, tgt: best, life: 1.4 });
-      G.fireT = BOW.interval; SFX.shoot();
+      G.fireT = BOW.interval; SFX.shoot(); p.shotT = .18;
+      if (Math.abs(tx - sx) > 2) p.side = tx > sx ? 1 : -1;
     } else G.fireT = .1;
   }
   // 화살 (추적)
@@ -957,7 +959,11 @@ function drawHeld(kind, hx, hy, side, sc, t) {
     const ox = side > 0 ? 1 : -3;
     R(ox, -9, 3, 4, '#8c96a0'); R(side > 0 ? ox + 3 : ox - 1, -9, 1, 4, '#e8eef2');
   } else if (kind === 'spear') {
-    R(0, -13, 1, 17, '#8a6038'); R(-1, -14, 3, 1, '#b08a3a'); R(0, -17, 1, 3, '#d8b860'); R(-1, -15, 3, 1, '#d8b860');
+    R(0, -13, 1, 17, '#8a6038');
+    R(-1, -14, 3, 1, '#4a3a2a');                                   // 묶은 자리
+    R(0, -15, 1, 1, '#6a747c');                                    // 목
+    R(-1, -18, 3, 3, '#9aa6b0'); R(-1, -18, 1, 3, '#e8eef2'); R(0, -18, 1, 3, '#cfd8de');   // 날
+    R(0, -20, 1, 2, '#f4f8fa');                                    // 뾰족한 끝
   }
 }
 function drawSuitor(e, sc, isBoss) {
@@ -987,15 +993,31 @@ function drawPlayer() {
   const p = G.p;
   if (p.inv > 0 && Math.floor(p.inv * 12) % 2 === 0 && G.state === 'play') return;
   const frame = p.moving && Math.floor(p.walk) % 2 ? 'B' : 'A';
-  const flip = p.fx < 0;
-  const img = SPR['ody' + frame + (flip ? 'f' : '')];
+  const flip = (p.side || 1) < 0;
+  const img = SPR['ody' + frame + ((p.side || 1) < 0 ? 'f' : '')];
   const x = Math.round(p.x - G.cam.x - 8), y = Math.round(p.y - G.cam.y - 14);
   rect(x + 3, y + 14, 10, 2, 'rgba(0,0,0,.35)');
   if (G.state === 'dying' || G.state === 'over') { ctx.save(); ctx.translate(x + 8, y + 14); ctx.rotate(Math.min(1, G.t * 2) * Math.PI / 2 * (flip ? -1 : 1)); ctx.drawImage(SPR.odyA, -8, -14); ctx.restore(); return; }
   ctx.drawImage(img, x, y);
-  // 등 뒤 활
-  const bx = flip ? x + 14 : x + 1;
-  rect(bx, y + 6, 1, 9, '#7a4a20'); rect(bx + (flip ? 1 : -1), y + 8, 1, 5, '#7a4a20'); rect(flip ? bx - 1 : bx + 1, y + 6, 1, 9, 'rgba(230,220,190,.6)');
+  // 앞손에 쥔 활 (바라보는 쪽으로 크게 휘어진 활 + 시위, 쏠 준비가 되면 화살을 건 모습)
+  const side = p.side || 1, gx = side > 0 ? x + 14 : x + 1, top = y;
+  const BULGE = [0, 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 2, 2, 1, 0], MID = 7;
+  const pull = p.shotT > 0 ? Math.round(2 * p.shotT / .18) : 0;
+  const nocked = G.fireT < .45 && G.state === 'play';
+  const strX = k => gx - side * Math.round((nocked ? 2 : pull) * (1 - Math.abs(k - MID) / MID));
+  for (let k = 0; k < BULGE.length; k++) {           // 활대: 어두운 테두리 → 나무 → 밝은 면
+    const bx = gx + side * BULGE[k];
+    rect(bx + side, top + k, 1, 1, '#2a1608');
+    rect(bx, top + k, 1, 1, k === 0 || k === 14 ? '#2a1608' : '#c8883a');
+    if (k > 1 && k < 13) rect(bx - side, top + k, 1, 1, k % 3 ? '#e8b060' : '#c8883a');
+  }
+  for (let k = 1; k < BULGE.length - 1; k++) rect(strX(k), top + k, 1, 1, '#fff6dc');   // 시위
+  if (nocked) {                                      // 시위에 건 화살
+    const sx0 = strX(MID);
+    for (let k = 0; k <= 8; k++) rect(sx0 + side * k, top + MID, 1, 1, k < 2 ? '#c0392b' : '#d8c8a8');
+    rect(sx0 + side * 9, top + MID - 1, 1, 3, '#eef3f6'); rect(sx0 + side * 10, top + MID, 1, 1, '#ffffff');
+  }
+  rect(gx + side * 3, top + MID - 1, 1, 3, '#c48a5e');   // 쥔 손
 }
 function drawHpBar() {
   const p = G.p, x = Math.round(p.x - G.cam.x - 9), y = Math.round(p.y - G.cam.y - 20);
