@@ -63,7 +63,7 @@ label.ck.chg{color:var(--gold)}
     <section><h2>보스 패턴 공통</h2><div class="wrap"><table class="kv" id="t-bossPattern"></table></div></section>
   </div>
   <section><h2>구혼자</h2><p class="note">처치 시간 = 무기 하나가 계속 맞힐 때 기준(검·도끼는 틱마다 맞는다고 가정한 최대치)</p><div class="wrap"><table id="t-enemies"></table></div></section>
-  <section><h2>스테이지</h2><p class="note">전원 등장 ≈ (구혼자 수 ÷ 평균 무리 인원) × 등장 간격. 무기 기대치 = 확정 2개 + 무기 든 구혼자 수 × 랜덤 드랍률</p><div class="wrap"><table id="t-stages"></table></div></section>
+  <section><h2>스테이지</h2><p class="note">한 무리는 동→남→서→북을 돌며 0.22초 간격으로 한 명씩 들어옵니다. 전원 등장 ≈ (구혼자 수 ÷ 평균 무리 인원) × 등장 간격. 방패병 비율만큼은 방패병으로 바뀝니다(3스테이지부터). 랜덤 드랍 기대치 = 검·도끼 든 구혼자 수 × 드랍률</p><div class="wrap"><table id="t-stages"></table></div></section>
   <section><h2>보스: 안티노오스</h2><p class="note">돌진 거리 = 돌진 속도 × 돌진 시간. 패턴은 체크된 것 중 무작위로 사용</p><div class="wrap"><table id="t-bosses"></table></div></section>
 </main>
 <script>
@@ -79,11 +79,12 @@ const FIELDS = {
   bow: [['dmg', '화살 1발 데미지'], ['interval', '발사 주기 (초)'], ['range', '조준 사거리'], ['arrowSpeed', '화살 속도']],
   sword: [['dmg', '틱당 데미지'], ['tick', '틱 간격 (초)'], ['radius', '회전 반경'], ['spinSpeed', '회전 속도 (라디안/초)'], ['hitSize', '판정 크기'], ['knockback', '밀어내기']],
   axe: [['dmg', '틱당 데미지'], ['tick', '틱 간격 (초)'], ['radius', '회전 반경'], ['spinSpeed', '회전 속도 (라디안/초)'], ['hitSize', '판정 크기'], ['knockback', '밀어내기']],
-  drops: [['guaranteedKills', '확정 드랍 처치 수 (검·도끼 각 1, 쉼표 구분)'], ['randomRate', '무기 든 구혼자 랜덤 드랍률 (0~1)']],
+  drops: [['bossSword', '안티노오스 처치 시 얻는 검'], ['bossAxe', '안티노오스 처치 시 얻는 도끼'], ['randomRate', '검 든 적은 검, 도끼 든 적은 도끼를 떨어뜨릴 확률 (0~1, 맨주먹·창·방패는 없음)']],
   bossPattern: [['dashTele', '돌진 예고 (초)'], ['tripleTele', '3연속 돌진 사이 예고 (초)'], ['tripleCount', '연속 돌진 횟수'], ['slamTele', '내려찍기 예고 (초)'], ['slamRadius', '충격파 최대 반경'], ['slamTime', '충격파 퍼지는 시간 (초)'], ['slamWidth', '충격파 판정 두께'], ['spinTele', '회전 베기 예고 (초)'], ['spinRadius', '회전 베기 반경'], ['spinTime', '회전 베기 지속 (초)'], ['spinSpeedMul', '회전 베기 중 추격 속도 배율'], ['dashSpinTime', '돌진 직후 회전 베기 지속 (초)']],
 };
-const ETYPES = ['fist', 'sword', 'axe', 'swordaxe', 'spear'];
-const ARMED = { fist: 0, sword: 1, axe: 1, swordaxe: 1, spear: 0 };
+const ETYPES = ['fist', 'sword', 'axe', 'swordaxe', 'spear', 'shield'];
+const MIX_TYPES = ['fist', 'sword', 'axe', 'swordaxe', 'spear'];   // 방패병은 shieldRate로 따로 섞음
+const ARMED = { fist: 0, sword: 1, axe: 1, swordaxe: 1, spear: 0, shield: 0 };
 const PATTERNS = [['dash', '돌진'], ['triple', '3연속 돌진'], ['slam', '내려찍기'], ['spin', '회전 베기']];
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -130,19 +131,21 @@ function renderEnemies() {
 }
 function renderStages() {
   const tbl = document.getElementById('t-stages'); tbl.innerHTML = '';
-  head(tbl, ['스테이지', '구혼자 수', '등장 종류', '무리 최소', '무리 최대', '등장 간격(초)', '무리 수', '전원 등장(초)', '무기 기대치(이 스테이지)', '누적 무기(검+도끼)']);
+  head(tbl, ['스테이지', '구혼자 수', '등장 종류', '방패병 비율', '무리 최소', '무리 최대', '등장 간격(초)', '무리 수', '전원 등장(초)', '랜덤 드랍 기대치', '스테이지 시작 시 보유(검+도끼)']);
   D.stages.forEach((s, i) => {
     const d = DEFAULT.stages[i], tr = document.createElement('tr');
     cell(tr, String(i + 1));
     cell(tr, numInput(s, 'enemies', d.enemies, renderDerived, 1));
     const mixTd = cell(tr, '');
-    for (const k of ETYPES) {
+    for (const k of MIX_TYPES) {
       const lab = document.createElement('label'); lab.className = 'ck';
       const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = s.mix.includes(k);
       const mark = () => lab.classList.toggle('chg', !same([...s.mix].sort(), [...d.mix].sort()));
-      cb.onchange = () => { s.mix = ETYPES.filter(t => t === k ? cb.checked : s.mix.includes(t)); if (!s.mix.length) { s.mix = [k]; cb.checked = true; } mixTd.querySelectorAll('label').forEach(l => l.classList.toggle('chg', !same([...s.mix].sort(), [...d.mix].sort()))); save(); renderDerived(); };
+      cb.onchange = () => { s.mix = MIX_TYPES.filter(t => t === k ? cb.checked : s.mix.includes(t)); if (!s.mix.length) { s.mix = [k]; cb.checked = true; } mixTd.querySelectorAll('label').forEach(l => l.classList.toggle('chg', !same([...s.mix].sort(), [...d.mix].sort()))); save(); renderDerived(); };
       lab.append(cb, D.enemies[k].name); mixTd.appendChild(lab); mark();
     }
+    if (s.shieldRate === undefined) s.shieldRate = 0;
+    cell(tr, numInput(s, 'shieldRate', d.shieldRate === undefined ? 0 : d.shieldRate, renderDerived));
     cell(tr, numInput(s, 'groupMin', d.groupMin, renderDerived, 1)); cell(tr, numInput(s, 'groupMax', d.groupMax, renderDerived, 1)); cell(tr, numInput(s, 'spawnInterval', d.spawnInterval, renderDerived));
     for (let j = 0; j < 4; j++) cell(tr, '', 'der');
     tbl.appendChild(tr);
@@ -184,14 +187,15 @@ function renderDerived() {
     tds[3].textContent = f1(Math.ceil(e.hp / D.sword.dmg) * D.sword.tick);
     tds[4].textContent = f1(Math.ceil(e.hp / D.axe.dmg) * D.axe.tick);
   });
-  let cum = 0;
+  let cum = 0;   // 스테이지 시작 시 보유 = 이전 스테이지들의 보스 보상 + 랜덤 드랍 기대치
   document.querySelectorAll('#t-stages tr').forEach((tr, i) => {
     if (i === 0) return; const s = D.stages[i - 1], tds = tr.querySelectorAll('td.der');
     const avg = (s.groupMin + s.groupMax) / 2, groups = s.enemies / avg;
     const armedShare = s.mix.filter(k => ARMED[k]).length / s.mix.length;
-    const exp = D.drops.guaranteedKills.filter(k => k <= s.enemies).length + s.enemies * armedShare * D.drops.randomRate;
-    cum += exp;
-    tds[0].textContent = f1(groups); tds[1].textContent = f1(groups * s.spawnInterval); tds[2].textContent = f1(exp) + '개'; tds[3].textContent = f1(cum) + '개';
+    const exp = s.enemies * (1 - (s.shieldRate || 0)) * armedShare * D.drops.randomRate;
+    tds[0].textContent = f1(groups); tds[1].textContent = f1(groups * s.spawnInterval); tds[2].textContent = f1(exp) + '개';
+    tds[3].textContent = f1(cum) + '개 (보상 ' + (i - 1) * (D.drops.bossSword + D.drops.bossAxe) + ')';
+    cum += exp + D.drops.bossSword + D.drops.bossAxe;
   });
   document.querySelectorAll('#t-bosses tr').forEach((tr, i) => {
     if (i === 0) return; const b = D.bosses[i - 1]; tr.querySelector('td.der').textContent = Math.round(b.dashSpeed * b.dashTime) + ' 도트';
@@ -208,7 +212,7 @@ function toJS() {
   let s = '// =====================================================================\n//  Odyssey_aScene — 밸런스 데이터 테이블 (balance.html 에서 내보냄 ' + new Date().toLocaleString('ko-KR') + ')\n//  이 파일의 숫자만 바꾸면 게임에 그대로 반영됩니다.\n// =====================================================================\nwindow.BALANCE = {\n';
   s += kv('player') + kv('bow') + kv('sword') + kv('axe') + kv('drops');
   s += '  enemies: {\n' + ETYPES.map(k => `    ${k}: ${obj(D.enemies[k])},`).join('\n') + '\n  },\n';
-  s += '  // mix: 등장 종류, groupMin~groupMax: 한 번에 몰려오는 인원, spawnInterval: 무리 사이 간격\n  stages: [\n' + D.stages.map(o => '    ' + obj(o) + ',').join('\n') + '\n  ],\n';
+  s += '  // mix: 등장 종류, groupMin~groupMax: 한 무리 인원(동서남북에서 한 명씩 들어옴), spawnInterval: 무리 사이 간격, shieldRate: 방패병 비율\n  stages: [\n' + D.stages.map(o => '    ' + obj(o) + ',').join('\n') + '\n  ],\n';
   s += '  // patterns: dash / triple / slam / spin, dashSpin: 돌진 후 회전 베기\n  bosses: [\n' + D.bosses.map(o => '    ' + obj(o) + ',').join('\n') + '\n  ],\n';
   s += kv('bossPattern') + '};\n';
   return s;
