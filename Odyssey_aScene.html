@@ -735,7 +735,7 @@ function update(dt) {
   G.t += dt;
   switch (G.state) {
     case 'intro':
-      if (G.t >= INTRO_REL && !G.capShown) { G.capShown = true; showCaption('스테이지 ' + G.stage, STAGE_SUB[G.stage - 1]); }
+      if (G.t >= INTRO_REL && !G.capShown) { G.capShown = true; showCaption('스테이지 ' + G.stage); }
       if (G.t >= INTRO_LEN) { G.state = 'caption'; G.t = 0; $('hud').classList.remove('hidden'); updateHud(); }
       break;
     case 'caption':
